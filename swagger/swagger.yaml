@@ -57,6 +57,32 @@
           }
         }
       }
+    },
+    "/username" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "summary" : "get current user's username",
+        "description" : "Returns the username of the currently logged-in user. Identifies\nthe user through the bearer token sent through the Authorization\nheader received from /login\n",
+        "operationId" : "getCurrentUsername",
+        "responses" : {
+          "200" : {
+            "description" : "authenticated user's username",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Username"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "missing or invalid token"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
     }
   },
   "components" : {
@@ -83,6 +109,23 @@
             "type" : "string"
           }
         }
+      },
+      "Username" : {
+        "required" : [ "username" ],
+        "type" : "object",
+        "properties" : {
+          "username" : {
+            "type" : "string",
+            "example" : "username"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
       }
     }
   }
