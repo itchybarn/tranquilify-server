@@ -52,8 +52,37 @@
           "400" : {
             "description" : "bad input parameter"
           },
-          "401" : {
+          "403" : {
             "description" : "invalid username or password"
+          }
+        }
+      }
+    },
+    "/user" : {
+      "post" : {
+        "tags" : [ "users" ],
+        "summary" : "create new user",
+        "description" : "Creates a new user with a given username and password\n",
+        "operationId" : "createUser",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UserCreationComponent"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "successful user creation"
+          },
+          "400" : {
+            "description" : "bad input parameter"
+          },
+          "403" : {
+            "description" : "unsuccessful user creation"
           }
         }
       }
@@ -75,8 +104,65 @@
               }
             }
           },
+          "400" : {
+            "description" : "bad input parameter"
+          },
           "401" : {
             "description" : "missing or invalid token"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/auth" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "summary" : "send a code to the user",
+        "description" : "Sends a code to the currently logged-in user's\nauthentication method\n",
+        "operationId" : "runAuth",
+        "responses" : {
+          "200" : {
+            "description" : "authentication sent successfully"
+          },
+          "400" : {
+            "description" : "bad input parameter"
+          },
+          "401" : {
+            "description" : "missing or invalid token"
+          },
+          "403" : {
+            "description" : "was not able to send authentication"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "users" ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AuthAttempt"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "successful authentication"
+          },
+          "400" : {
+            "description" : "bad input parameter"
+          },
+          "401" : {
+            "description" : "missing or invalid token"
+          },
+          "403" : {
+            "description" : "unsuccessful authentication"
           }
         },
         "security" : [ {
@@ -87,18 +173,27 @@
   },
   "components" : {
     "schemas" : {
+      "UserCreationComponent" : {
+        "required" : [ "authMethod", "loginCredentials" ],
+        "type" : "object",
+        "properties" : {
+          "loginCredentials" : {
+            "$ref" : "#/components/schemas/LoginCredentials"
+          },
+          "authMethod" : {
+            "$ref" : "#/components/schemas/AuthMethod"
+          }
+        }
+      },
       "LoginCredentials" : {
         "required" : [ "password", "username" ],
         "type" : "object",
         "properties" : {
           "username" : {
-            "type" : "string",
-            "description" : "username with which the user is attempting to log in"
+            "$ref" : "#/components/schemas/Username"
           },
           "password" : {
-            "type" : "string",
-            "description" : "password with which the user is attempting to log in",
-            "format" : "password"
+            "$ref" : "#/components/schemas/Password"
           }
         }
       },
@@ -107,18 +202,29 @@
         "properties" : {
           "token" : {
             "type" : "string"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
       "Username" : {
-        "required" : [ "username" ],
-        "type" : "object",
-        "properties" : {
-          "username" : {
-            "type" : "string",
-            "example" : "username"
-          }
-        }
+        "type" : "string",
+        "example" : "username"
+      },
+      "Password" : {
+        "type" : "string",
+        "description" : "password with which the user is attempting to log in",
+        "format" : "password"
+      },
+      "AuthMethod" : {
+        "type" : "string",
+        "example" : "1235557890"
+      },
+      "AuthAttempt" : {
+        "type" : "string",
+        "example" : "1234"
       }
     },
     "securitySchemes" : {
