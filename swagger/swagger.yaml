@@ -175,7 +175,7 @@
                 "example" : {
                   "token" : "<access JWT>",
                   "tokenType" : "Bearer",
-                  "expiresIn" : 86400
+                  "expiresIn" : 3600
                 }
               }
             }
@@ -243,36 +243,172 @@
         } ]
       }
     },
-    "/reset-pass" : {
-      "put" : {
-        "tags" : [ "users" ],
-        "summary" : "reset a user's password",
-        "operationId" : "resetPassword",
+    "/change-pass" : {
+      "post" : {
+        "tags" : [ "account" ],
+        "summary" : "change password",
+        "description" : "Changes password of logged-in user. Requires current password.\nMay require step up protection if auth_time is older than a certain window.\n",
+        "operationId" : "changePassword",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Password"
+                "$ref" : "#/components/schemas/ChangePasswordRequest"
               }
             }
-          }
+          },
+          "required" : true
         },
         "responses" : {
           "200" : {
-            "description" : "successful password reset"
+            "description" : "password changed"
           },
           "400" : {
-            "description" : "bad input parameter"
+            "$ref" : "#/components/responses/BadRequest"
           },
           "401" : {
-            "description" : "missing or invalid token"
+            "$ref" : "#/components/responses/Unauthorized"
           },
           "403" : {
-            "description" : "unsuccessful password reset"
+            "description" : "current password incorrect, or step-up auth required",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "examples" : {
+                  "wrongPassword" : {
+                    "summary" : "the current password is incorrect",
+                    "value" : {
+                      "code" : "invalid_credentials",
+                      "message" : "The current password is incorrect."
+                    }
+                  },
+                  "stepUp" : {
+                    "summary" : "session is too old; re-authentication required",
+                    "value" : {
+                      "code" : "step_up_required",
+                      "message" : "Recent re-authentication is required to change your password."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
           }
         },
         "security" : [ {
           "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/reset-pass/request" : {
+      "post" : {
+        "tags" : [ "account" ],
+        "summary" : "request a code",
+        "description" : "Starts the forgotten password flow. Sends a code to user's auth method.",
+        "operationId" : "requestPasswordReset",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "if the account exists, a code has been sent"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/reset-pass/verify" : {
+      "post" : {
+        "tags" : [ "account" ],
+        "summary" : "verify a code",
+        "description" : "Verifies the code. On success, provides a short-lived reset token.",
+        "operationId" : "verifyPasswordReset",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetVerifyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "reset token provided",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                },
+                "example" : {
+                  "token" : "<password_reset JWT>",
+                  "tokenType" : "Bearer",
+                  "expiresIn" : 600
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/InvalidCode"
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/reset-pass/confirm" : {
+      "post" : {
+        "tags" : [ "account" ],
+        "summary" : "confirm new password",
+        "description" : "Sets a new password using the token from verify",
+        "operationId" : "confirmPasswordReset",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetConfirmRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "password reset"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
+          }
+        },
+        "security" : [ {
+          "resetAuth" : [ ]
         } ]
       }
     }
@@ -304,7 +440,7 @@
         }
       },
       "ChangePasswordRequest" : {
-        "required" : [ "username" ],
+        "required" : [ "currentPassword", "newPassword" ],
         "type" : "object",
         "properties" : {
           "currentPassword" : {
