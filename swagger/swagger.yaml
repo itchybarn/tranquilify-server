@@ -17,15 +17,18 @@
     "description" : "SwaggerHub API Auto Mocking"
   } ],
   "tags" : [ {
-    "name" : "users",
-    "description" : "Available to all users"
+    "name" : "auth",
+    "description" : "Authentication"
+  }, {
+    "name" : "account",
+    "description" : "Account management and creation"
   } ],
   "paths" : {
     "/login" : {
       "post" : {
-        "tags" : [ "users" ],
+        "tags" : [ "auth" ],
         "summary" : "user login",
-        "description" : "By passing in a username and password, the user can attempt\nto login\n",
+        "description" : "Verifies a username and password. Returns a pre-auth token\nthat can be used to call /auth/send and /auth/verify\n",
         "operationId" : "loginUser",
         "requestBody" : {
           "description" : "Login credentials",
@@ -40,29 +43,48 @@
         },
         "responses" : {
           "200" : {
-            "description" : "successful login",
+            "description" : "credentials accepted",
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SessionToken"
+                  "$ref" : "#/components/schemas/TokenResponse"
+                },
+                "example" : {
+                  "token" : "<pre-auth JWT>",
+                  "tokenType" : "Bearer",
+                  "expiresIn" : 300
                 }
               }
             }
           },
           "400" : {
-            "description" : "bad input parameter"
+            "$ref" : "#/components/responses/BadRequest"
           },
           "403" : {
-            "description" : "invalid username or password"
+            "description" : "invalid username or password",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "code" : "invalid_credentials",
+                  "message" : "The username or password is incorrect"
+                }
+              }
+            }
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
           }
         }
       }
     },
     "/user" : {
       "post" : {
-        "tags" : [ "users" ],
+        "tags" : [ "account" ],
         "summary" : "create new user",
-        "description" : "Creates a new user with a given username and password\n",
+        "description" : "Creates a new user with login credentials and an auth method",
         "operationId" : "createUser",
         "requestBody" : {
           "content" : {
@@ -75,23 +97,131 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "successful user creation"
+          "201" : {
+            "description" : "user created"
           },
           "400" : {
-            "description" : "bad input parameter"
+            "$ref" : "#/components/responses/BadRequest"
           },
-          "403" : {
-            "description" : "unsuccessful user creation"
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
           }
         }
       }
     },
+    "/auth/send" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "send a code to the user",
+        "description" : "Sends a one-time code to the auth method for the pre-auth user",
+        "operationId" : "sendAuthCode",
+        "responses" : {
+          "200" : {
+            "description" : "authentication sent successfully"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "description" : "unable to send the code to the auth method",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "code" : "code_delivery_failed",
+                  "message" : "Unable to send a code to your auth method"
+                }
+              }
+            }
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
+          }
+        },
+        "security" : [ {
+          "preAuthAuth" : [ ]
+        } ]
+      }
+    },
+    "/auth/verify" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "verify the user's code",
+        "description" : "Verifies a one-time code. On success, provides the user with a full session token",
+        "operationId" : "verifyAuthCode",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AuthCodeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "authentication process complete",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                },
+                "example" : {
+                  "token" : "<access JWT>",
+                  "tokenType" : "Bearer",
+                  "expiresIn" : 86400
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/InvalidCode"
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
+          }
+        },
+        "security" : [ {
+          "preAuthAuth" : [ ]
+        } ]
+      }
+    },
+    "/logout" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "end the current session",
+        "description" : "Revokes the current token's privileges",
+        "operationId" : "logout",
+        "responses" : {
+          "200" : {
+            "description" : "session invalidated"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/username" : {
       "get" : {
-        "tags" : [ "users" ],
+        "tags" : [ "account" ],
         "summary" : "get current user's username",
-        "description" : "Returns the username of the currently logged-in user. Identifies\nthe user through the bearer token sent through the Authorization\nheader received from /login\n",
+        "description" : "Returns the username of the currently logged-in user.",
         "operationId" : "getCurrentUsername",
         "responses" : {
           "200" : {
@@ -104,65 +234,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "bad input parameter"
-          },
           "401" : {
-            "description" : "missing or invalid token"
-          }
-        },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
-    "/auth" : {
-      "get" : {
-        "tags" : [ "users" ],
-        "summary" : "send a code to the user",
-        "description" : "Sends a code to the currently logged-in user's\nauthentication method\n",
-        "operationId" : "runAuth",
-        "responses" : {
-          "200" : {
-            "description" : "authentication sent successfully"
-          },
-          "400" : {
-            "description" : "bad input parameter"
-          },
-          "401" : {
-            "description" : "missing or invalid token"
-          },
-          "403" : {
-            "description" : "was not able to send authentication"
-          }
-        },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      },
-      "post" : {
-        "tags" : [ "users" ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/AuthAttempt"
-              }
-            }
-          }
-        },
-        "responses" : {
-          "200" : {
-            "description" : "successful authentication"
-          },
-          "400" : {
-            "description" : "bad input parameter"
-          },
-          "401" : {
-            "description" : "missing or invalid token"
-          },
-          "403" : {
-            "description" : "unsuccessful authentication"
+            "$ref" : "#/components/responses/Unauthorized"
           }
         },
         "security" : [ {
@@ -230,38 +303,266 @@
           }
         }
       },
-      "SessionToken" : {
+      "ChangePasswordRequest" : {
+        "required" : [ "username" ],
         "type" : "object",
         "properties" : {
-          "token" : {
-            "type" : "string"
+          "currentPassword" : {
+            "$ref" : "#/components/schemas/Password"
           },
-          "timestamp" : {
-            "type" : "string",
-            "format" : "date-time"
+          "newPassword" : {
+            "$ref" : "#/components/schemas/Password"
           }
         }
       },
+      "ResetRequest" : {
+        "required" : [ "username" ],
+        "type" : "object",
+        "properties" : {
+          "username" : {
+            "$ref" : "#/components/schemas/Username"
+          }
+        }
+      },
+      "ResetVerifyRequest" : {
+        "required" : [ "code", "username" ],
+        "type" : "object",
+        "properties" : {
+          "username" : {
+            "$ref" : "#/components/schemas/Username"
+          },
+          "code" : {
+            "$ref" : "#/components/schemas/AuthCode"
+          }
+        }
+      },
+      "ResetConfirmRequest" : {
+        "required" : [ "newPassword" ],
+        "type" : "object",
+        "properties" : {
+          "newPassword" : {
+            "$ref" : "#/components/schemas/Password"
+          }
+        }
+      },
+      "AuthCodeRequest" : {
+        "required" : [ "code" ],
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "$ref" : "#/components/schemas/AuthCode"
+          }
+        }
+      },
+      "TokenResponse" : {
+        "required" : [ "expiresIn", "token", "tokenType" ],
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "description" : "Signed JWT, schema description for per-scope info"
+          },
+          "tokenType" : {
+            "type" : "string",
+            "example" : "Bearer"
+          },
+          "expiresIn" : {
+            "type" : "integer",
+            "description" : "Seconds until expiration",
+            "example" : 300
+          }
+        },
+        "description" : "Shared token type for every bearer token. Only JWT's token_use differs"
+      },
       "Username" : {
+        "maxLength" : 32,
+        "minLength" : 3,
+        "pattern" : "^[a-zA-Z0-9_.-]+$",
         "type" : "string",
         "example" : "username"
       },
       "Password" : {
+        "maxLength" : 256,
+        "minLength" : 8,
         "type" : "string",
+        "description" : "Stored only as a salted hash; never returned by the API.",
         "format" : "password"
       },
       "AuthMethod" : {
         "type" : "string",
+        "description" : "Destination to which a one-time code will be sent",
         "example" : "1235557890"
       },
-      "AuthAttempt" : {
+      "AuthCode" : {
+        "pattern" : "^[0-9]{6}$",
         "type" : "string",
-        "example" : "1234"
+        "description" : "Six-digit one-time code",
+        "example" : "123456"
+      },
+      "Error" : {
+        "required" : [ "code", "message" ],
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Error code",
+            "enum" : [ "validation_failed", "invalid_credentials", "invalid_token", "code_incorrect", "code_expired", "code_delivery_failed", "step_up_required", "username_taken", "rate_limited" ]
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "For display/logging only"
+          },
+          "errors" : {
+            "type" : "array",
+            "description" : "Per-field detail, present when code is validation_failed",
+            "items" : {
+              "required" : [ "field", "issue" ],
+              "type" : "object",
+              "properties" : {
+                "field" : {
+                  "type" : "string",
+                  "example" : "newPassword"
+                },
+                "issue" : {
+                  "type" : "string",
+                  "example" : "must be at least 8 characters"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses" : {
+      "BadRequest" : {
+        "description" : "bad input parameter",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "examples" : {
+              "validation" : {
+                "summary" : "one or more fields failed the validation",
+                "value" : {
+                  "code" : "validation_failed",
+                  "message" : "Some fields are invalid",
+                  "errors" : [ {
+                    "field" : "currentPassword",
+                    "issue" : "is required"
+                  }, {
+                    "field" : "newPassword",
+                    "issue" : "must be at least 8 characters"
+                  } ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "incorrect token",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "examples" : {
+              "invalidToken" : {
+                "summary" : "issue with the token",
+                "value" : {
+                  "code" : "invalid_token",
+                  "message" : "The token is missing or invalid"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimited" : {
+        "description" : "too many requests",
+        "headers" : {
+          "Retry-After" : {
+            "description" : "wait before retrying",
+            "style" : "simple",
+            "explode" : false,
+            "schema" : {
+              "type" : "integer"
+            }
+          }
+        },
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "examples" : {
+              "rateLimited" : {
+                "summary" : "too many attempts",
+                "value" : {
+                  "code" : "rate_limited",
+                  "message" : "Too many requests. Try again later."
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvalidCode" : {
+        "description" : "the supplied one-time code is incorrect or has expired",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "examples" : {
+              "invalidCode" : {
+                "summary" : "wrong or expired one-time code",
+                "value" : {
+                  "code" : "code_incorrect",
+                  "message" : "The code is incorrect or has expired."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Conflict" : {
+        "description" : "the resource already exists",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "examples" : {
+              "usernameTaken" : {
+                "summary" : "username is already registered",
+                "value" : {
+                  "code" : "username_taken",
+                  "message" : "That username is already taken"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "securitySchemes" : {
       "bearerAuth" : {
         "type" : "http",
+        "description" : "Full session token",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      },
+      "preAuthAuth" : {
+        "type" : "http",
+        "description" : "Pre-auth token from /login, used for /auth/send and /auth/verify",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      },
+      "resetAuth" : {
+        "type" : "http",
+        "description" : "Reset token from /reset-pass/verify, used for /reset-pass/confirm",
         "scheme" : "bearer",
         "bearerFormat" : "JWT"
       }
