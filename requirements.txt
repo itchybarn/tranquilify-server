@@ -1,2 +1,10 @@
-fastapi
-uvicorn[standard]
+# Web
+fastapi # framework for api
+uvicorn[standard] # Asynchronous Server Gateway Interface (ASGI) server, which serves api
+
+# Database
+sqlalchemy[asyncio] # Object-Relational Mapper (ORM) and async support
+asyncpg # async PostgreSQL driver
+
+#Config
+pydantic-settings # settings class and env stuff

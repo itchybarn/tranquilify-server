@@ -1,7 +1,30 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tranquilify
+      POSTGRES_PASSWORD: tranquilify
+      POSTGRES_DB: tranquilify
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranquilify -d tranquilify"] # checks health of connection of database. -U: username, -d: database
+      interval: 5s # how often it runs
+      timeout: 5s # time it will wait to finish
+      retries: 5 # failures before unhealthy
+
   api:
     build: .
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
       - ./app:/app/app
+
+volumes:
+  db_data:
