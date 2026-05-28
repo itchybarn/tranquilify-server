@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.core.config import settings
 from app.db.base import Base
 
+# Import every model module so its tables register on Base.metadata
+# before Alembic reads target_metadata for autogenerate.
+import app.models.user  # noqa: F401
+
 from alembic import context
 
 # this is the Alembic Config object, which provides

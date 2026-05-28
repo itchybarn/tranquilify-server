@@ -51,8 +51,8 @@
                 },
                 "example" : {
                   "token" : "<pre-auth JWT>",
-                  "tokenType" : "Bearer",
-                  "expiresIn" : 300
+                  "token_type" : "Bearer",
+                  "expires_in" : 300
                 }
               }
             }
@@ -174,8 +174,8 @@
                 },
                 "example" : {
                   "token" : "<access JWT>",
-                  "tokenType" : "Bearer",
-                  "expiresIn" : 3600
+                  "token_type" : "Bearer",
+                  "expires_in" : 3600
                 }
               }
             }
@@ -359,8 +359,8 @@
                 },
                 "example" : {
                   "token" : "<password_reset JWT>",
-                  "tokenType" : "Bearer",
-                  "expiresIn" : 600
+                  "token_type" : "Bearer",
+                  "expires_in" : 600
                 }
               }
             }
@@ -416,13 +416,13 @@
   "components" : {
     "schemas" : {
       "UserCreationComponent" : {
-        "required" : [ "authMethod", "loginCredentials" ],
+        "required" : [ "auth_method", "login_credentials" ],
         "type" : "object",
         "properties" : {
-          "loginCredentials" : {
+          "login_credentials" : {
             "$ref" : "#/components/schemas/LoginCredentials"
           },
-          "authMethod" : {
+          "auth_method" : {
             "$ref" : "#/components/schemas/AuthMethod"
           }
         }
@@ -440,13 +440,13 @@
         }
       },
       "ChangePasswordRequest" : {
-        "required" : [ "currentPassword", "newPassword" ],
+        "required" : [ "current_password", "new_password" ],
         "type" : "object",
         "properties" : {
-          "currentPassword" : {
+          "current_password" : {
             "$ref" : "#/components/schemas/Password"
           },
-          "newPassword" : {
+          "new_password" : {
             "$ref" : "#/components/schemas/Password"
           }
         }
@@ -473,10 +473,10 @@
         }
       },
       "ResetConfirmRequest" : {
-        "required" : [ "newPassword" ],
+        "required" : [ "new_password" ],
         "type" : "object",
         "properties" : {
-          "newPassword" : {
+          "new_password" : {
             "$ref" : "#/components/schemas/Password"
           }
         }
@@ -491,18 +491,18 @@
         }
       },
       "TokenResponse" : {
-        "required" : [ "expiresIn", "token", "tokenType" ],
+        "required" : [ "expires_in", "token", "token_type" ],
         "type" : "object",
         "properties" : {
           "token" : {
             "type" : "string",
             "description" : "Signed JWT, schema description for per-scope info"
           },
-          "tokenType" : {
+          "token_type" : {
             "type" : "string",
             "example" : "Bearer"
           },
-          "expiresIn" : {
+          "expires_in" : {
             "type" : "integer",
             "description" : "Seconds until expiration",
             "example" : 300
@@ -518,7 +518,7 @@
         "example" : "username"
       },
       "Password" : {
-        "maxLength" : 256,
+        "maxLength" : 72,
         "minLength" : 8,
         "type" : "string",
         "description" : "Stored only as a salted hash; never returned by the API.",
@@ -557,7 +557,7 @@
               "properties" : {
                 "field" : {
                   "type" : "string",
-                  "example" : "newPassword"
+                  "example" : "new_password"
                 },
                 "issue" : {
                   "type" : "string",
@@ -584,10 +584,10 @@
                   "code" : "validation_failed",
                   "message" : "Some fields are invalid",
                   "errors" : [ {
-                    "field" : "currentPassword",
+                    "field" : "current_password",
                     "issue" : "is required"
                   }, {
-                    "field" : "newPassword",
+                    "field" : "new_password",
                     "issue" : "must be at least 8 characters"
                   } ]
                 }

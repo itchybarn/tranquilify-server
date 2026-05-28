@@ -2,9 +2,13 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.routes import account
+from app.core.errors import register_exception_handlers
 from app.db.session import get_async_session
 
 app = FastAPI(title="Tranquilify Server", version="0.1.0")
+register_exception_handlers(app)
+app.include_router(account.router)
 
 @app.get("/health")
 async def health(session: AsyncSession = Depends(get_async_session)) -> dict[str, str]:

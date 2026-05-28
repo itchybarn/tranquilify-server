@@ -5,7 +5,9 @@ uvicorn[standard] # Asynchronous Server Gateway Interface (ASGI) server, which s
 # Database
 sqlalchemy[asyncio] # Object-Relational Mapper (ORM) and async support
 asyncpg # async PostgreSQL driver
-alembic
+alembic # database version control
+bcrypt # password hashing
 
 #Config
 pydantic-settings # settings class and env stuff
+email-validator # pydantic uses for string validation
