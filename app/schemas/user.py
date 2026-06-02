@@ -9,3 +9,9 @@ class LoginCredentials(BaseModel):
 class UserCreate(BaseModel):
     login_credentials: LoginCredentials
     auth_method: str
+
+class TokenResponse(BaseModel):
+    token: str
+    token_type: str = "Bearer"
+    scope: str
+    expires_in: int

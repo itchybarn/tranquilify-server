@@ -1,6 +1,7 @@
 # Web
 fastapi # framework for api
 uvicorn[standard] # Asynchronous Server Gateway Interface (ASGI) server, which serves api
+pyjwt # for everything token related
 
 # Database
 sqlalchemy[asyncio] # Object-Relational Mapper (ORM) and async support

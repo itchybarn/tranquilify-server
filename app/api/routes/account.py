@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_session
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, LoginCredentials, TokenResponse
 from app.services import user_service
 
 router = APIRouter(tags=["account"])
@@ -13,3 +13,10 @@ async def create_user(
     session: AsyncSession = Depends(get_async_session),
 ) -> None:
     await user_service.create_user(session, payload)
+
+@router.post("/login", response_model=TokenResponse ,status_code=status.HTTP_200_OK)
+async def login_user(
+    payload: LoginCredentials,
+    session: AsyncSession = Depends(get_async_session),
+) -> TokenResponse:
+    return await user_service.login_user(session,payload)
