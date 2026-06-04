@@ -10,4 +10,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGO: str
 
+    TWILIO_SID: str
+    TWILIO_CLIENT_SECRET: str
+
 settings = Settings()

@@ -38,3 +38,5 @@ async def login_user(session: AsyncSession, payload: LoginCredentials) -> TokenR
         scope = scope,
         expires_in = lifespan
     )
+
+async def send_auth(session: AsyncSession, user: )
