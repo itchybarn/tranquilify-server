@@ -13,7 +13,7 @@ def create_access_token(user_id: str, scope: str, expire_time) -> str:
     expires = datetime.now(timezone.utc) + timedelta(seconds=expire_time)
 
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "exp": expires,
         "scope": scope, # where we shall dictate if pre_auth state or full_auth
     }

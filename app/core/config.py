@@ -12,5 +12,6 @@ class Settings(BaseSettings):
 
     TWILIO_SID: str
     TWILIO_CLIENT_SECRET: str
+    TRANQUILIFY_SERVICE_SID: str
 
 settings = Settings()
