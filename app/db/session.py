@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import settings
+from app.db.base import Base
 
 # the engine is the connection pool from which we'll form connections
 # echo being False keeps SQL out of the logs. should be True when debugging!
@@ -24,3 +25,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     # async with ensures that the connection is given back to the pool once it's finished
     async with AsyncSessionLocal() as session:
         yield session # waits here until the session is done being used
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
