@@ -47,7 +47,8 @@ async def send_auth(session: AsyncSession, user_id: UUID, twilio_client: Client)
     user = await session.scalar(
         select(User).where(User.id == user_id)
     )
-    #flow: have user, get their phone number, send number a message using the twilio client we setup within the verification methods.
+    #flow: have user, get their phone number, send number a message using the 
+    # twilio client we setup within the verification methods in twilio_2FA.
     destination = user.phone_number
 
     await send_verification(
