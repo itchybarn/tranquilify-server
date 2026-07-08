@@ -3,9 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from app.core.errors import APIError
-from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password
+from app.api.dependencies.token_auth import create_access_token
+from app.api.dependencies.refresh_auth import create_refresh_token
 from app.models.user import User
-from app.schemas.user import LoginCredentials, TokenResponse
+from app.schemas.user import LoginCredentials
+from app.schemas.auth import LoginResponse
 from twilio.rest import Client
 from app.api.dependencies.twilio_2FA import send_verification
 
@@ -25,25 +28,16 @@ async def check_credentials(session: AsyncSession, creds: LoginCredentials) -> U
     return user
 
 
-async def login_user(session: AsyncSession, payload: LoginCredentials) -> TokenResponse:
+async def login_user(session: AsyncSession, payload: LoginCredentials) -> LoginResponse:
     user = await check_credentials(session, payload)
+    access_token = create_access_token(user_id = str(user.id))
+    refresh_token = await create_refresh_token(session, user_id = str(user.id))
 
-    lifespan = 300
-    scope = "pre_auth"
-    pre_auth_token = create_access_token(
-        user_id = str(user.id),
-        scope = scope,
-        expire_time = lifespan
-    )
+    return LoginResponse(access_token = access_token, refresh_token = refresh_token)
 
-    return TokenResponse(
-        token = pre_auth_token,
-        scope = scope,
-        expires_in = lifespan
-    )
 
 #not throwing error for if user none, because user will be something beyond this point in the flow
-async def send_auth(session: AsyncSession, user_id: UUID, twilio_client: Client) -> None:
+async def send_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: Client) -> None:
     user = await session.scalar(
         select(User).where(User.id == user_id)
     )
