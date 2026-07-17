@@ -10,9 +10,9 @@ from app.api.dependencies.refresh_auth import create_refresh_token, hash_token
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.schemas.user import LoginCredentials
-from app.schemas.auth import LoginResponse
+from app.schemas.auth import LoginResponse, PhoneAuthPayload
 from twilio.rest import Client
-from app.api.dependencies.twilio_2FA import send_verification
+from app.api.dependencies.twilio_2FA import send_verification, check_verification
 
 #Helper function for logging in
 async def check_credentials(session: AsyncSession, creds: LoginCredentials) -> User:
@@ -39,9 +39,9 @@ async def login_user(session: AsyncSession, payload: LoginCredentials) -> LoginR
 
 
 #not throwing error for if user none, because user will be something beyond this point in the flow
-async def send_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: Client) -> None:
+async def send_mobile_code(session: AsyncSession, payload: PhoneAuthPayload, twilio_client: Client) -> None:
     user = await session.scalar(
-        select(User).where(User.id == user_id)
+        select(User).where(User.username == payload.username)
     )
     #flow: have user, get their phone number, send number a message using the 
     # twilio client we setup within the verification methods in twilio_2FA.
@@ -70,3 +70,18 @@ async def logout_user(session: AsyncSession, user_id: UUID, refresh_token_raw: s
     token_row.revoked_at = datetime.now(timezone.utc)
     await session.commit()
 
+
+async def check_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: Client, code: str) -> str:
+    user = await session.scalar(
+        select(User).where(User.id == user_id)
+    )
+
+    destination = user.phone_number
+
+    status = await check_verification(
+        twilio_client=twilio_client,
+        destination=destination,
+        code=code
+    )
+
+    return status
