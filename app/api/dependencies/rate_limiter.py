@@ -28,16 +28,13 @@ async def username_identifier(req: Request):
 
 
 # login attempts: 5/min + 20/hr per ip , 10/15min per user
-# when we define a list of dependencies for the route header, need to unpack the elements in the list so it doesnt become nested!
 login_rate_limits = [
     Depends(RateLimiter(Limiter(Rate(5, Duration.MINUTE)))),
     Depends(RateLimiter(Limiter(Rate(20,Duration.HOUR)))),
     Depends(RateLimiter(Limiter(Rate(10, Duration.MINUTE * 15)), identifier= username_identifier))]
 
-# to protect twilio :) 3/hr per ip
-code_rate_limit = Depends(RateLimiter(Limiter(RateLimiter(3, Duration.HOUR))))
+# to protect twilio :) 3/hr per username
+code_rate_limit = Depends(RateLimiter(Limiter(Rate(3, Duration.HOUR)), identifier=username_identifier))
 
-# refresh gen: 20/min
-refresh_rate_limit = Depends(RateLimiter(Limiter(Rate(20, Duration.MINUTE * 20))))
-
-
+# refresh gen: 20/min per ip
+refresh_rate_limit = Depends(RateLimiter(Limiter(Rate(20, Duration.MINUTE))))

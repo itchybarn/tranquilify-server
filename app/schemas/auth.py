@@ -28,4 +28,3 @@ class LogoutRequest(BaseModel):
 
 class PhoneAuthPayload(BaseModel):
     username: Username
-    phone: str

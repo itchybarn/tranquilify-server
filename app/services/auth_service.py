@@ -38,11 +38,16 @@ async def login_user(session: AsyncSession, payload: LoginCredentials) -> LoginR
     return LoginResponse(access_token = access_token, refresh_token = refresh_token)
 
 
-#not throwing error for if user none, because user will be something beyond this point in the flow
 async def send_mobile_code(session: AsyncSession, payload: PhoneAuthPayload, twilio_client: Client) -> None:
     user = await session.scalar(
         select(User).where(User.username == payload.username)
     )
+    if user is None:
+        raise APIError(
+            status=404,
+            code="user_not_found",
+            message="No user with that username"
+        )
     #flow: have user, get their phone number, send number a message using the 
     # twilio client we setup within the verification methods in twilio_2FA.
     destination = user.phone_number
@@ -61,8 +66,7 @@ async def logout_user(session: AsyncSession, user_id: UUID, refresh_token_raw: s
         select(RefreshToken).where(RefreshToken.token_hash == token_hash)
     )
 
-    # Idempotent: silently succeed if not found, wrong owner, or already revoked.
-    # Prevents information leakage and lets clients safely retry.
+    # silently succeed if not found, wrong owner, or already revoked.
     if token_row is None or token_row.user_id != user_id or token_row.revoked:
         return
 
@@ -75,6 +79,12 @@ async def check_mobile_code(session: AsyncSession, user_id: UUID, twilio_client:
     user = await session.scalar(
         select(User).where(User.id == user_id)
     )
+    if user is None:
+        raise APIError(
+            status=404,
+            code="user_not_found",
+            message="No user with that id"
+        )
 
     destination = user.phone_number
 

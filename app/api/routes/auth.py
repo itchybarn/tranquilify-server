@@ -12,7 +12,7 @@ from app.api.dependencies.rate_limiter import login_rate_limits, code_rate_limit
 
 router = APIRouter(tags=["auth"])
 
-@router.post("/login", response_model=LoginResponse ,status_code=status.HTTP_200_OK, dependencies= [login_rate_limits])
+@router.post("/login", response_model=LoginResponse ,status_code=status.HTTP_200_OK, dependencies=login_rate_limits)
 async def login_user(
     payload: LoginCredentials,
     session: AsyncSession = Depends(get_async_session),
