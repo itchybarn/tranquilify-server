@@ -21,3 +21,6 @@ class LoginResponse(BaseModel):
     refresh_token: str
     token_type: str = "Bearer"
     expires_in: int = 900
+
+class LogoutRequest(BaseModel):
+    refresh_token: str

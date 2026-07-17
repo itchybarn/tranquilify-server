@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -5,8 +6,9 @@ from uuid import UUID
 from app.core.errors import APIError
 from app.core.security import verify_password
 from app.api.dependencies.token_auth import create_access_token
-from app.api.dependencies.refresh_auth import create_refresh_token
+from app.api.dependencies.refresh_auth import create_refresh_token, hash_token
 from app.models.user import User
+from app.models.refresh_token import RefreshToken
 from app.schemas.user import LoginCredentials
 from app.schemas.auth import LoginResponse
 from twilio.rest import Client
@@ -50,4 +52,21 @@ async def send_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: 
         destination=destination,
         channel="sms",
     )
+
+
+async def logout_user(session: AsyncSession, user_id: UUID, refresh_token_raw: str) -> None:
+    token_hash = hash_token(refresh_token_raw)
+
+    token_row = await session.scalar(
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+    )
+
+    # Idempotent: silently succeed if not found, wrong owner, or already revoked.
+    # Prevents information leakage and lets clients safely retry.
+    if token_row is None or token_row.user_id != user_id or token_row.revoked:
+        return
+
+    token_row.revoked = True
+    token_row.revoked_at = datetime.now(timezone.utc)
+    await session.commit()
 

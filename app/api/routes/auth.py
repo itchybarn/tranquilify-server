@@ -4,7 +4,7 @@ from twilio.rest import Client
 
 from app.db.session import get_async_session
 from app.schemas.user import LoginCredentials
-from app.schemas.auth import LoginResponse, AccessTokenPayload
+from app.schemas.auth import LoginResponse, AccessTokenPayload, LogoutRequest
 from app.services import auth_service
 from app.api.dependencies.token_auth import get_access_token_payload
 from app.api.dependencies.twilio_2FA import get_twilio_client
@@ -25,3 +25,11 @@ async def send_auth(
     twilio_client: Client = Depends(get_twilio_client)
 ) -> None:
     return await auth_service.send_mobile_code(session, user_token.user_id, twilio_client)
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(
+    payload: LogoutRequest,
+    user_token: AccessTokenPayload = Depends(get_access_token_payload),
+    session: AsyncSession = Depends(get_async_session),
+) -> None:
+    await auth_service.logout_user(session, user_token.user_id, payload.refresh_token)

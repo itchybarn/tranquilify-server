@@ -2,16 +2,15 @@ from twilio.rest import Client
 from twilio.http.async_http_client import AsyncTwilioHttpClient
 from app.core.config import settings
 
-#create client, make it so client can be passed to routes as a DI
-
+# create client, make it so client can be passed to routes as a DI
 async def get_twilio_client() -> Client:
     http_client = AsyncTwilioHttpClient()
 
     client = Client(
-    settings.TWILIO_SID,
-    settings.TWILIO_CLIENT_SECRET,
-    http_client=http_client
-)
+        settings.TWILIO_SID,
+        settings.TWILIO_CLIENT_SECRET,
+        http_client=http_client
+    )
     return client
 
 async def send_verification(twilio_client: Client, destination: str, channel: str):
