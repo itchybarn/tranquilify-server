@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, Field
+from app.schemas.common import Username
 
 
 class AccessTokenPayload(BaseModel):
@@ -21,3 +22,8 @@ class LoginResponse(BaseModel):
     refresh_token: str
     token_type: str = "Bearer"
     expires_in: int = 900
+
+class PhoneAuthPayload(BaseModel):
+    username: Username
+    phone: str
+

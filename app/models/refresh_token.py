@@ -15,6 +15,8 @@ from app.db.base import Base
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
+    # mapped is denoting the variable as a column in the database, as uuid is allowing the transfer 
+    # from python compiled code to postgresql to work, primary key marking that it is incremented every new instance?
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -26,13 +28,11 @@ class RefreshToken(Base):
         ForeignKey("user.id"),
         index=True
     )
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-
     revoked: Mapped[bool] = mapped_column(default=False)
     revoked_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=None
@@ -42,7 +42,6 @@ class RefreshToken(Base):
         ForeignKey("refresh_tokens.id"),
         default=None
     )
-
     device_info: Mapped[Optional[str]] = mapped_column(String(255), default=None)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), default=None)
     last_used_at: Mapped[Optional[datetime]] = mapped_column(

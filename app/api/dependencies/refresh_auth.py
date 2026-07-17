@@ -22,6 +22,7 @@ def generate_refresh_token() -> RefreshTokenPayload:
         expires_at = expires_at
         )
 
+# TODO: add ip and device info (optional)
 async def create_refresh_token(session: AsyncSession, user_id: str) -> str:
     refreshTokenPayload = generate_refresh_token()
     token_row = RefreshToken(

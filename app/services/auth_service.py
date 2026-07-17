@@ -10,7 +10,7 @@ from app.models.user import User
 from app.schemas.user import LoginCredentials
 from app.schemas.auth import LoginResponse
 from twilio.rest import Client
-from app.api.dependencies.twilio_2FA import send_verification
+from app.api.dependencies.twilio_2FA import send_verification, check_verification
 
 #Helper function for logging in
 async def check_credentials(session: AsyncSession, creds: LoginCredentials) -> User:
@@ -50,4 +50,19 @@ async def send_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: 
         destination=destination,
         channel="sms",
     )
+
+async def check_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: Client, code: str) -> str:
+    user = await session.scalar(
+        select(User).where(User.id == user_id)
+    )
+
+    destination = user.phone_number
+
+    status = await check_verification(
+        twilio_client=twilio_client,
+        destination=destination,
+        code=code
+    )
+
+    return status
 
