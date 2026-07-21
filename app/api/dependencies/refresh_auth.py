@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, timedelta
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.errors import APIError
 from app.models.refresh_token import RefreshToken
 from app.schemas.auth import RefreshTokenPayload
 import hashlib
@@ -36,4 +38,43 @@ async def create_refresh_token(session: AsyncSession, user_id: str) -> str:
     return refreshTokenPayload.token_raw
 
 
+# Look up a raw refresh token and confirm it's usable.
+# Returns the row on success; raises APIError(401, "invalid_refresh_token") for
+# unknown, revoked, or expired tokens. One error code for all three by design
+# (see plan: simple reject, no reuse detection).
+async def validate_refresh_token(session: AsyncSession, raw_token: str) -> RefreshToken:
+    token_row = await session.scalar(
+        select(RefreshToken).where(RefreshToken.token_hash == hash_token(raw_token))
+    )
 
+    now = datetime.now(timezone.utc)
+    if token_row is None or token_row.revoked or token_row.expires_at <= now:
+        raise APIError(
+            status=401,
+            code="invalid_refresh_token",
+            message="Refresh token is invalid, revoked, or expired."
+        )
+
+    return token_row
+
+
+# Issue a fresh refresh token and mark the old one as replaced. Caller is
+# responsible for committing the transaction so the whole rotation is atomic.
+async def rotate_refresh_token(session: AsyncSession, old_row: RefreshToken) -> str:
+    payload = generate_refresh_token()
+    new_row = RefreshToken(
+        token_hash=payload.token_hash,
+        user_id=old_row.user_id,
+        expires_at=payload.expires_at,
+    )
+    session.add(new_row)
+    # flush so new_row.id is populated before we reference it on the old row
+    await session.flush()
+
+    now = datetime.now(timezone.utc)
+    old_row.revoked = True
+    old_row.revoked_at = now
+    old_row.last_used_at = now
+    old_row.replaced_by_id = new_row.id
+
+    return payload.token_raw

@@ -4,11 +4,21 @@ from twilio.rest import Client
 
 from app.db.session import get_async_session
 from app.schemas.user import LoginCredentials
-from app.schemas.auth import LoginResponse, AccessTokenPayload, LogoutRequest, PhoneAuthPayload
+from app.schemas.auth import (
+    LoginResponse,
+    AccessTokenPayload,
+    LogoutRequest,
+    PhoneAuthPayload,
+    RefreshRequest,
+)
 from app.services import auth_service
 from app.api.dependencies.token_auth import get_access_token_payload
 from app.api.dependencies.twilio_2FA import get_twilio_client
-from app.api.dependencies.rate_limiter import login_rate_limits, code_rate_limit
+from app.api.dependencies.rate_limiter import (
+    login_rate_limits,
+    code_rate_limit,
+    refresh_rate_limit,
+)
 
 router = APIRouter(tags=["auth"])
 
@@ -26,6 +36,13 @@ async def send_auth(
     twilio_client: Client = Depends(get_twilio_client)
 ) -> None:
     return await auth_service.send_mobile_code(session, payload, twilio_client)
+
+@router.post("/refresh", response_model=LoginResponse, status_code=status.HTTP_200_OK, dependencies=[refresh_rate_limit])
+async def refresh(
+    payload: RefreshRequest,
+    session: AsyncSession = Depends(get_async_session),
+) -> LoginResponse:
+    return await auth_service.refresh_tokens(session, payload.refresh_token)
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(

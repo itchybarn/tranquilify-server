@@ -6,7 +6,12 @@ from uuid import UUID
 from app.core.errors import APIError
 from app.core.security import verify_password
 from app.api.dependencies.token_auth import create_access_token
-from app.api.dependencies.refresh_auth import create_refresh_token, hash_token
+from app.api.dependencies.refresh_auth import (
+    create_refresh_token,
+    hash_token,
+    validate_refresh_token,
+    rotate_refresh_token,
+)
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.schemas.user import LoginCredentials
@@ -57,6 +62,15 @@ async def send_mobile_code(session: AsyncSession, payload: PhoneAuthPayload, twi
         destination=destination,
         channel="sms",
     )
+
+
+async def refresh_tokens(session: AsyncSession, refresh_token_raw: str) -> LoginResponse:
+    old_row = await validate_refresh_token(session, refresh_token_raw)
+    access_token = create_access_token(user_id=str(old_row.user_id))
+    new_refresh_raw = await rotate_refresh_token(session, old_row)
+    await session.commit()
+
+    return LoginResponse(access_token=access_token, refresh_token=new_refresh_raw)
 
 
 async def logout_user(session: AsyncSession, user_id: UUID, refresh_token_raw: str) -> None:

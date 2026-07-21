@@ -227,6 +227,62 @@
         } ]
       }
     },
+    "/refresh" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "renew tokens",
+        "description" : "Exchanges a valid refresh token for a new access token AND a new refresh token.\nRotates the old refresh token: it is marked revoked and linked to its replacement.\nUnknown, revoked, or expired tokens return 401 with `invalid_refresh_token`.\nNo bearer auth required; the refresh token in the body is the credential.\n",
+        "operationId" : "refreshTokens",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "new access and refresh tokens issued",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                },
+                "example" : {
+                  "access_token" : "<access JWT>",
+                  "refresh_token" : "<new opaque refresh token>",
+                  "token_type" : "Bearer",
+                  "expires_in" : 900
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "description" : "refresh token is invalid, revoked, or expired",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "code" : "invalid_refresh_token",
+                  "message" : "Refresh token is invalid, revoked, or expired."
+                }
+              }
+            }
+          },
+          "429" : {
+            "$ref" : "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/username" : {
       "get" : {
         "tags" : [ "account" ],
@@ -510,6 +566,40 @@
           }
         }
       },
+      "RefreshRequest" : {
+        "required" : [ "refresh_token" ],
+        "type" : "object",
+        "properties" : {
+          "refresh_token" : {
+            "type" : "string",
+            "description" : "The raw refresh token issued by /login or a previous /refresh"
+          }
+        }
+      },
+      "LoginResponse" : {
+        "required" : [ "access_token", "expires_in", "refresh_token", "token_type" ],
+        "type" : "object",
+        "properties" : {
+          "access_token" : {
+            "type" : "string",
+            "description" : "Short-lived JWT used as a bearer credential"
+          },
+          "refresh_token" : {
+            "type" : "string",
+            "description" : "Long-lived opaque token used with /refresh to obtain a new pair"
+          },
+          "token_type" : {
+            "type" : "string",
+            "example" : "Bearer"
+          },
+          "expires_in" : {
+            "type" : "integer",
+            "description" : "Seconds until the access_token expires",
+            "example" : 900
+          }
+        },
+        "description" : "Access + refresh token pair returned by /login and /refresh"
+      },
       "TokenResponse" : {
         "required" : [ "expires_in", "token", "token_type" ],
         "type" : "object",
@@ -562,7 +652,7 @@
           "code" : {
             "type" : "string",
             "description" : "Error code",
-            "enum" : [ "validation_failed", "invalid_credentials", "invalid_token", "code_incorrect", "code_expired", "code_delivery_failed", "step_up_required", "username_taken", "rate_limited" ]
+            "enum" : [ "validation_failed", "invalid_credentials", "invalid_token", "invalid_refresh_token", "code_incorrect", "code_expired", "code_delivery_failed", "step_up_required", "username_taken", "rate_limited" ]
           },
           "message" : {
             "type" : "string",

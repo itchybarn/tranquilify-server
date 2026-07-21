@@ -26,5 +26,8 @@ class LoginResponse(BaseModel):
 class LogoutRequest(BaseModel):
     refresh_token: str
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
 class PhoneAuthPayload(BaseModel):
     username: Username
