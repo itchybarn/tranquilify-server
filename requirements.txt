@@ -13,3 +13,7 @@ bcrypt # password hashing
 #Config
 pydantic-settings # settings class and env stuff
 email-validator # pydantic uses for string validation
+
+#Rate Limiting
+pyrate_limiter
+fastapi_limiter

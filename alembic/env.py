@@ -11,6 +11,7 @@ from app.db.base import Base
 # Import every model module so its tables register on Base.metadata
 # before Alembic reads target_metadata for autogenerate.
 import app.models.user  # noqa: F401
+import app.models.refresh_token  # noqa: F401
 
 from alembic import context
 

@@ -26,6 +26,8 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session # waits here until the session is done being used
 
+# NOT used on app startup: Alembic ("alembic upgrade head") owns the real schema.
+# Kept for tests / quick local bootstrapping that need a throwaway DB without migrations.
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -202,8 +202,18 @@
       "post" : {
         "tags" : [ "auth" ],
         "summary" : "end the current session",
-        "description" : "Revokes the current token's privileges",
+        "description" : "Revokes the caller's refresh token so the session cannot be renewed.\nThe access token is not invalidated and remains valid until its exp.\nIdempotent: unknown or already-revoked tokens still return 200.\n",
         "operationId" : "logout",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LogoutRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "description" : "session invalidated"
@@ -487,6 +497,16 @@
         "properties" : {
           "code" : {
             "$ref" : "#/components/schemas/AuthCode"
+          }
+        }
+      },
+      "LogoutRequest" : {
+        "required" : [ "refresh_token" ],
+        "type" : "object",
+        "properties" : {
+          "refresh_token" : {
+            "type" : "string",
+            "description" : "The raw refresh token belonging to the session to revoke"
           }
         }
       },
