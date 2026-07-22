@@ -8,4 +8,4 @@ class LoginCredentials(BaseModel):
 
 class UserCreate(BaseModel):
     login_credentials: LoginCredentials
-    auth_method: str
+    phone: str

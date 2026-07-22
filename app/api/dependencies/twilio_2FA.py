@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.core.api_errors import code_incorrect, code_delivery_failed
 
 # A single client (and its underlying async HTTP connection pool) is reused across
-# requests instead of building a new one every call, which previously leaked connections.
+# requests instead of building a new one every call.
 _twilio_client: Client | None = None
 
 # create client, make it so client can be passed to routes as a DI

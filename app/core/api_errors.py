@@ -44,3 +44,8 @@ def code_incorrect() -> APIError:
 
 def code_delivery_failed() -> APIError:
     return APIError(status=403, code="code_delivery_failed", message="Unable to send a code to your auth method")
+
+# -- login --
+
+def invalid_login_method() -> APIError:
+    return APIError(status=403, code="invalid_login_method", message="The login_method you provided is not supported")

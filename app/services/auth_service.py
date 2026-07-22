@@ -8,6 +8,7 @@ from app.core.api_errors import (
     user_not_found,
     incorrect_current_password,
     code_incorrect,
+    invalid_login_method
 )
 from app.core.security import verify_password, hash_password
 from app.api.dependencies.token_auth import create_access_token
@@ -20,32 +21,52 @@ from app.api.dependencies.refresh_auth import (
 )
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
-from app.schemas.user import LoginCredentials
+from app.schemas.user import LoginCredentials, LoginPayload
 from app.schemas.auth import LoginResponse, PhoneAuthPayload
+from app.schemas.common import Username, Password
 from twilio.rest import Client
 from app.api.dependencies.twilio_2FA import send_verification, check_verification
 
-#Helper function for logging in
-async def check_credentials(session: AsyncSession, creds: LoginCredentials) -> User:
+# helper function for loggin in with password
+async def get_user_from_password(session: AsyncSession, username: Username, password: Password) -> User:
     user = await session.scalar(
-        select(User).where(User.username == creds.username)
+        select(User).where(User.username == username)
     )
 
-    if user is None or not verify_password(creds.password, user.hashed_password):
+    if user is None or not verify_password(password, user.hashed_password):
         raise invalid_credentials()
 
     return user
 
+# helper function for logging in with code
+async def get_user_from_code(session: AsyncSession, username: Username, code: str, twilio_client: Client) -> User:
+    user = await session.scalar(
+        select(User).where(User.username == username)
+        )
+    if user is None:
+        raise invalid_credentials()
+    
+    status = await check_mobile_code(twilio_client, user, code)
+    if status != "approved":
+        return code_incorrect()
+    
+    return user
 
-async def login_user(session: AsyncSession, payload: LoginCredentials) -> LoginResponse:
-    user = await check_credentials(session, payload)
+async def login_user(session: AsyncSession, twilio_client: Client, payload: LoginPayload) -> LoginResponse:
+    if payload.login_method == "password":
+        user = await get_user_from_password(session, username=payload.username, password=payload.login_value)
+    elif payload.login_method == "code":
+        user = await get_user_from_code(session, username=payload.username, code=payload.login_value, twilio_client=twilio_client)
+    else:
+        raise invalid_login_method()
+
     access_token = create_access_token(user_id = str(user.id))
     refresh_token = await create_refresh_token(session, user_id = str(user.id))
 
     return LoginResponse(access_token = access_token, refresh_token = refresh_token)
 
 
-async def send_mobile_code(session: AsyncSession, payload: PhoneAuthPayload, twilio_client: Client) -> None:
+async def send_mobile_code(session: AsyncSession, twilio_client: Client, payload: PhoneAuthPayload) -> None:
     user = await session.scalar(
         select(User).where(User.username == payload.username)
     )
@@ -127,13 +148,7 @@ async def reset_password(session: AsyncSession, twilio_client: Client, username:
     await session.commit()
 
 
-async def check_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: Client, code: str) -> str:
-    user = await session.scalar(
-        select(User).where(User.id == user_id)
-    )
-    if user is None:
-        raise user_not_found()
-
+async def check_mobile_code(twilio_client: Client, user: User, code: str) -> str:
     destination = user.phone_number
 
     status = await check_verification(

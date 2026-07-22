@@ -17,7 +17,7 @@ async def create_user(session: AsyncSession, payload: UserCreate) -> User:
     
     user = User(
         username=creds.username,
-        phone_number=payload.auth_method,
+        phone_number=payload.phone,
         hashed_password=hash_password(creds.password),
     )
     session.add(user)

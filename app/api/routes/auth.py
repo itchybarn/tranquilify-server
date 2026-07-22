@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from twilio.rest import Client
 
 from app.db.session import get_async_session
-from app.schemas.user import LoginCredentials
+from app.schemas.user import LoginPayload
 from app.schemas.auth import (
     LoginResponse,
     AccessTokenPayload,
@@ -27,10 +27,11 @@ router = APIRouter(tags=["auth"])
 
 @router.post("/login", response_model=LoginResponse ,status_code=status.HTTP_200_OK, dependencies=login_rate_limits)
 async def login_user(
-    payload: LoginCredentials,
+    payload: LoginPayload,
     session: AsyncSession = Depends(get_async_session),
+    twilio_client: Client = Depends(get_twilio_client)
 ) -> LoginResponse:
-    return await auth_service.login_user(session,payload)
+    return await auth_service.login_user(session, twilio_client, payload)
 
 @router.post("/auth/send", status_code=status.HTTP_200_OK, dependencies=[code_rate_limit])
 async def send_auth(
@@ -38,7 +39,7 @@ async def send_auth(
     session: AsyncSession = Depends(get_async_session),
     twilio_client: Client = Depends(get_twilio_client)
 ) -> None:
-    return await auth_service.send_mobile_code(session, payload, twilio_client)
+    return await auth_service.send_mobile_code(session, twilio_client, payload)
 
 @router.post("/refresh", response_model=LoginResponse, status_code=status.HTTP_200_OK, dependencies=[refresh_rate_limit])
 async def refresh(
