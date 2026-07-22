@@ -7,9 +7,11 @@ from app.schemas.user import LoginCredentials
 from app.schemas.auth import (
     LoginResponse,
     AccessTokenPayload,
+    ChangePasswordRequest,
     LogoutRequest,
     PhoneAuthPayload,
     RefreshRequest,
+    ResetPasswordRequest,
 )
 from app.services import auth_service
 from app.api.dependencies.token_auth import get_access_token_payload
@@ -18,6 +20,7 @@ from app.api.dependencies.rate_limiter import (
     login_rate_limits,
     code_rate_limit,
     refresh_rate_limit,
+    reset_rate_limit,
 )
 
 router = APIRouter(tags=["auth"])
@@ -51,3 +54,23 @@ async def logout(
     session: AsyncSession = Depends(get_async_session),
 ) -> None:
     await auth_service.logout_user(session, user_token.user_id, payload.refresh_token)
+
+@router.post("/change-pass", status_code=status.HTTP_200_OK)
+async def change_password(
+    payload: ChangePasswordRequest,
+    user_token: AccessTokenPayload = Depends(get_access_token_payload),
+    session: AsyncSession = Depends(get_async_session),
+) -> None:
+    await auth_service.change_password(
+        session, user_token.user_id, payload.current_password, payload.new_password
+    )
+
+@router.post("/reset-pass", status_code=status.HTTP_200_OK, dependencies=[reset_rate_limit])
+async def reset_password(
+    payload: ResetPasswordRequest,
+    session: AsyncSession = Depends(get_async_session),
+    twilio_client: Client = Depends(get_twilio_client),
+) -> None:
+    await auth_service.reset_password(
+        session, twilio_client, payload.username, payload.code, payload.new_password
+    )

@@ -370,90 +370,17 @@
         } ]
       }
     },
-    "/reset-pass/request" : {
+    "/reset-pass" : {
       "post" : {
         "tags" : [ "account" ],
-        "summary" : "request a code",
-        "description" : "Starts the forgotten password flow. Sends a code to user's auth method.",
-        "operationId" : "requestPasswordReset",
+        "summary" : "reset a forgotten password",
+        "description" : "Resets the password for a logged-out user. The caller supplies the active\none-time code previously sent to their auth method via /auth/send, along with\nthe new password. If the code is valid, the password is updated.\nNo bearer auth is required; the one-time code is the credential.\nTo avoid revealing which usernames exist, an unknown username and an\nincorrect/expired code return the same error.\n",
+        "operationId" : "resetPassword",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ResetRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "if the account exists, a code has been sent"
-          },
-          "400" : {
-            "$ref" : "#/components/responses/BadRequest"
-          },
-          "429" : {
-            "$ref" : "#/components/responses/RateLimited"
-          }
-        }
-      }
-    },
-    "/reset-pass/verify" : {
-      "post" : {
-        "tags" : [ "account" ],
-        "summary" : "verify a code",
-        "description" : "Verifies the code. On success, provides a short-lived reset token.",
-        "operationId" : "verifyPasswordReset",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/ResetVerifyRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "reset token provided",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/TokenResponse"
-                },
-                "example" : {
-                  "token" : "<password_reset JWT>",
-                  "token_type" : "Bearer",
-                  "expires_in" : 600
-                }
-              }
-            }
-          },
-          "400" : {
-            "$ref" : "#/components/responses/BadRequest"
-          },
-          "403" : {
-            "$ref" : "#/components/responses/InvalidCode"
-          },
-          "429" : {
-            "$ref" : "#/components/responses/RateLimited"
-          }
-        }
-      }
-    },
-    "/reset-pass/confirm" : {
-      "post" : {
-        "tags" : [ "account" ],
-        "summary" : "confirm new password",
-        "description" : "Sets a new password using the token from verify",
-        "operationId" : "confirmPasswordReset",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/ResetConfirmRequest"
+                "$ref" : "#/components/schemas/ResetPasswordRequest"
               }
             }
           },
@@ -466,16 +393,13 @@
           "400" : {
             "$ref" : "#/components/responses/BadRequest"
           },
-          "401" : {
-            "$ref" : "#/components/responses/Unauthorized"
+          "403" : {
+            "$ref" : "#/components/responses/InvalidCode"
           },
           "429" : {
             "$ref" : "#/components/responses/RateLimited"
           }
-        },
-        "security" : [ {
-          "resetAuth" : [ ]
-        } ]
+        }
       }
     }
   },
@@ -517,17 +441,8 @@
           }
         }
       },
-      "ResetRequest" : {
-        "required" : [ "username" ],
-        "type" : "object",
-        "properties" : {
-          "username" : {
-            "$ref" : "#/components/schemas/Username"
-          }
-        }
-      },
-      "ResetVerifyRequest" : {
-        "required" : [ "code", "username" ],
+      "ResetPasswordRequest" : {
+        "required" : [ "code", "new_password", "username" ],
         "type" : "object",
         "properties" : {
           "username" : {
@@ -535,13 +450,7 @@
           },
           "code" : {
             "$ref" : "#/components/schemas/AuthCode"
-          }
-        }
-      },
-      "ResetConfirmRequest" : {
-        "required" : [ "new_password" ],
-        "type" : "object",
-        "properties" : {
+          },
           "new_password" : {
             "$ref" : "#/components/schemas/Password"
           }
@@ -803,12 +712,6 @@
       "preAuthAuth" : {
         "type" : "http",
         "description" : "Pre-auth token from /login, used for /auth/send and /auth/verify",
-        "scheme" : "bearer",
-        "bearerFormat" : "JWT"
-      },
-      "resetAuth" : {
-        "type" : "http",
-        "description" : "Reset token from /reset-pass/verify, used for /reset-pass/confirm",
         "scheme" : "bearer",
         "bearerFormat" : "JWT"
       }

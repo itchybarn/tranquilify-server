@@ -36,5 +36,8 @@ login_rate_limits = [
 # to protect twilio :) 3/hr per username
 code_rate_limit = Depends(RateLimiter(Limiter(Rate(3, Duration.HOUR)), identifier=username_identifier))
 
+# password reset attempts: 5/hr per username
+reset_rate_limit = Depends(RateLimiter(Limiter(Rate(5, Duration.HOUR)), identifier=username_identifier))
+
 # refresh gen: 20/min per ip
 refresh_rate_limit = Depends(RateLimiter(Limiter(Rate(20, Duration.MINUTE))))

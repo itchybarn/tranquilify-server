@@ -1,7 +1,8 @@
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import select
+from uuid import UUID
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.errors import APIError
+from app.core.api_errors import invalid_refresh_token
 from app.models.refresh_token import RefreshToken
 from app.schemas.auth import RefreshTokenPayload
 import hashlib
@@ -49,13 +50,20 @@ async def validate_refresh_token(session: AsyncSession, raw_token: str) -> Refre
 
     now = datetime.now(timezone.utc)
     if token_row is None or token_row.revoked or token_row.expires_at <= now:
-        raise APIError(
-            status=401,
-            code="invalid_refresh_token",
-            message="Refresh token is invalid, revoked, or expired."
-        )
+        raise invalid_refresh_token()
 
     return token_row
+
+
+# Revoke every still-active refresh token for a user in one bulk UPDATE. Used after
+# a password change/reset so all existing sessions can no longer be renewed.
+# Caller is responsible for committing the transaction.
+async def revoke_all_user_tokens(session: AsyncSession, user_id: UUID) -> None:
+    await session.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.revoked.is_(False))
+        .values(revoked=True, revoked_at=datetime.now(timezone.utc))
+    )
 
 
 # Issue a fresh refresh token and mark the old one as replaced. Caller is

@@ -8,3 +8,7 @@ Username = Annotated[str, StringConstraints(
 Password = Annotated[str, StringConstraints(
     min_length=8, max_length=72
 )]
+# Six-digit one-time code sent via the auth/verification flow
+AuthCode = Annotated[str, StringConstraints(
+    pattern=r"^[0-9]{6}$"
+)]

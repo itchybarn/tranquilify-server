@@ -3,14 +3,20 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
-from app.core.errors import APIError
-from app.core.security import verify_password
+from app.core.api_errors import (
+    invalid_credentials,
+    user_not_found,
+    incorrect_current_password,
+    code_incorrect,
+)
+from app.core.security import verify_password, hash_password
 from app.api.dependencies.token_auth import create_access_token
 from app.api.dependencies.refresh_auth import (
     create_refresh_token,
     hash_token,
     validate_refresh_token,
     rotate_refresh_token,
+    revoke_all_user_tokens,
 )
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
@@ -26,12 +32,8 @@ async def check_credentials(session: AsyncSession, creds: LoginCredentials) -> U
     )
 
     if user is None or not verify_password(creds.password, user.hashed_password):
-        raise APIError(
-            status=401,
-            code="invalid_credentials",
-            message="Invalid username or password"
-            )
-    
+        raise invalid_credentials()
+
     return user
 
 
@@ -48,11 +50,7 @@ async def send_mobile_code(session: AsyncSession, payload: PhoneAuthPayload, twi
         select(User).where(User.username == payload.username)
     )
     if user is None:
-        raise APIError(
-            status=404,
-            code="user_not_found",
-            message="No user with that username"
-        )
+        raise user_not_found()
     #flow: have user, get their phone number, send number a message using the 
     # twilio client we setup within the verification methods in twilio_2FA.
     destination = user.phone_number
@@ -89,16 +87,52 @@ async def logout_user(session: AsyncSession, user_id: UUID, refresh_token_raw: s
     await session.commit()
 
 
+async def change_password(session: AsyncSession, user_id: UUID, current_password: str, new_password: str) -> None:
+    user = await session.scalar(
+        select(User).where(User.id == user_id)
+    )
+    if user is None:
+        raise user_not_found()
+
+    if not verify_password(current_password, user.hashed_password):
+        raise incorrect_current_password()
+
+    user.hashed_password = hash_password(new_password)
+    # Revoke all sessions so a changed password takes effect everywhere.
+    await revoke_all_user_tokens(session, user.id)
+    await session.commit()
+
+
+async def reset_password(session: AsyncSession, twilio_client: Client, username: str, code: str, new_password: str) -> None:
+    user = await session.scalar(
+        select(User).where(User.username == username)
+    )
+
+    # Generic failure whether the user is missing or the code is wrong, so this
+    # endpoint can't be used to discover which usernames exist.
+    if user is None:
+        raise code_incorrect()
+
+    status = await check_verification(
+        twilio_client=twilio_client,
+        destination=user.phone_number,
+        code=code
+    )
+    if status != "approved":
+        raise code_incorrect()
+
+    user.hashed_password = hash_password(new_password)
+    # Revoke all sessions so a reset password locks out any existing (possibly attacker) sessions.
+    await revoke_all_user_tokens(session, user.id)
+    await session.commit()
+
+
 async def check_mobile_code(session: AsyncSession, user_id: UUID, twilio_client: Client, code: str) -> str:
     user = await session.scalar(
         select(User).where(User.id == user_id)
     )
     if user is None:
-        raise APIError(
-            status=404,
-            code="user_not_found",
-            message="No user with that id"
-        )
+        raise user_not_found()
 
     destination = user.phone_number
 

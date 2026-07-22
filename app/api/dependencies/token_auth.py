@@ -1,9 +1,9 @@
 import jwt
-from fastapi import Depends, status
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.core.config import settings
-from app.core.errors import APIError
+from app.core.api_errors import token_expired, invalid_token
 from app.schemas.auth import AccessTokenPayload
 from datetime import datetime, timedelta, timezone
 
@@ -40,19 +40,11 @@ async def get_access_token_payload(auth_credentials: HTTPAuthorizationCredential
         return AccessTokenPayload(**token_data)
     
     except jwt.ExpiredSignatureError:
-        raise APIError(
-            status = status.HTTP_401_UNAUTHORIZED,
-            #the error frontend will look for in order to hit /api/auth/refresh?
-            code = "token_expired",
-            message = "Access token has expired."
-        )
-    
+        # code the frontend looks for in order to hit /api/auth/refresh
+        raise token_expired()
+
     except jwt.PyJWTError:
-        raise APIError(
-            status = status.HTTP_401_UNAUTHORIZED,
-            code = "invalid_token",
-            message = "Credentials could not be validated."
-        )
+        raise invalid_token()
     
     
     

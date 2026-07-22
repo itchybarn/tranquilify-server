@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import APIError
+from app.core.api_errors import username_taken
 from app.core.security import hash_password
 from app.models.user import User
 from app.schemas.user import UserCreate
@@ -13,11 +13,7 @@ async def create_user(session: AsyncSession, payload: UserCreate) -> User:
         select(User).where(User.username == creds.username)
     )
     if existing is not None:
-        raise APIError(
-            status = 409,
-            code = "username_taken",
-            message = "That username is already taken"
-        )
+        raise username_taken()
     
     user = User(
         username=creds.username,

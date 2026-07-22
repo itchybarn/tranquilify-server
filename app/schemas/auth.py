@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, Field
-from app.schemas.common import Username
+from app.schemas.common import Username, Password, AuthCode
 
 
 class AccessTokenPayload(BaseModel):
@@ -31,3 +31,12 @@ class RefreshRequest(BaseModel):
 
 class PhoneAuthPayload(BaseModel):
     username: Username
+
+class ChangePasswordRequest(BaseModel):
+    current_password: Password
+    new_password: Password
+
+class ResetPasswordRequest(BaseModel):
+    username: Username
+    code: AuthCode
+    new_password: Password
