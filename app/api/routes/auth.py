@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from twilio.rest import Client
 
 from app.db.session import get_async_session
-from app.schemas.user import LoginPayload
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -79,11 +78,11 @@ async def reset_password(
         session, twilio_client, payload.username, payload.code, payload.new_password
     )
 
-@router.post("/change-phone", status_code=status.HTTP_200_OK)
+@router.post("/change-phone",response_model=ChangePhoneResponse, status_code=status.HTTP_200_OK)
 async def change_phone(
     payload: ChangePhoneRequest,
     user_token: AccessTokenPayload = Depends(get_access_token_payload),
     session: AsyncSession = Depends(get_async_session)
 ) -> ChangePhoneResponse:
-    await auth_service.change_phone(session, user_token.user_id, payload)
+    return await auth_service.change_phone(session, user_token.user_id, payload)
     

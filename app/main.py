@@ -1,13 +1,14 @@
+import truststore
 from contextlib import asynccontextmanager
-
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.api.routes import account, auth
 from app.api.dependencies.twilio_2FA import close_twilio_client
 from app.core.errors import register_exception_handlers
 from app.db.session import get_async_session
+
+truststore.inject_into_ssl()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

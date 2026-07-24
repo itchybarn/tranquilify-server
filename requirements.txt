@@ -3,6 +3,7 @@ fastapi # framework for api
 uvicorn[standard] # Asynchronous Server Gateway Interface (ASGI) server, which serves api
 pyjwt # for everything token related
 twilio # for 2FA w/ SMS
+certifi # for making ssl cert
 
 # Database
 sqlalchemy[asyncio] # Object-Relational Mapper (ORM) and async support

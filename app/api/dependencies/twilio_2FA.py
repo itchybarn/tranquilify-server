@@ -1,3 +1,6 @@
+import ssl
+import certifi
+import aiohttp
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 from twilio.http.async_http_client import AsyncTwilioHttpClient
@@ -12,7 +15,11 @@ _twilio_client: Client | None = None
 async def get_twilio_client() -> Client:
     global _twilio_client
     if _twilio_client is None:
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
         http_client = AsyncTwilioHttpClient()
+        http_client.session = aiohttp.ClientSession(connector=connector)
+        
         _twilio_client = Client(
             settings.TWILIO_SID,
             settings.TWILIO_CLIENT_SECRET,

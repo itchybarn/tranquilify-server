@@ -166,6 +166,8 @@ async def change_phone(session: AsyncSession, user_id: UUID, payload: ChangePhon
         raise incorrect_phone()
 
     user.phone_number = payload.new_number
-    
+
     await revoke_all_user_tokens(session, user_id)
     await session.commit()
+
+    return ChangePhoneResponse(phone_number=payload.new_number)
