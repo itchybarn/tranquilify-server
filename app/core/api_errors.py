@@ -27,6 +27,9 @@ def invalid_credentials() -> APIError:
 def incorrect_current_password() -> APIError:
     return APIError(status=403, code="invalid_credentials", message="Current password is incorrect")
 
+def incorrect_phone() -> APIError:
+    return APIError(status=400, code="incorrect_phone", message="Incorrect phone number")
+
 
 # -- users --
 

@@ -12,3 +12,9 @@ Password = Annotated[str, StringConstraints(
 AuthCode = Annotated[str, StringConstraints(
     pattern=r"^[0-9]{6}$"
 )]
+
+# 15 digit max phone number that must start with +
+PhoneNumber = Annotated[str, StringConstraints(
+    strip_whitespace=True,
+    pattern=r"^\+[1-9]\d{1,14}$"
+)]

@@ -2,7 +2,7 @@ import uuid
 from typing import Literal
 from datetime import datetime
 from pydantic import BaseModel, Field
-from app.schemas.common import Username, Password, AuthCode
+from app.schemas.common import Username, Password, AuthCode, PhoneNumber
 
 
 class AccessTokenPayload(BaseModel):
@@ -17,7 +17,7 @@ class RefreshTokenPayload(BaseModel):
     token_hash: str
     expires_at: datetime
 
-class LoginPayload(BaseModel):
+class LoginRequest(BaseModel):
     username: Username
     login_method: Literal["password", "code"]
     login_value: str
@@ -45,3 +45,10 @@ class ResetPasswordRequest(BaseModel):
     username: Username
     code: AuthCode
     new_password: Password
+
+class ChangePhoneRequest(BaseModel):
+    old_number: PhoneNumber
+    new_number: PhoneNumber
+
+class ChangePhoneResponse(BaseModel):
+    phone_number: str

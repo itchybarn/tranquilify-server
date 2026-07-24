@@ -8,7 +8,8 @@ from app.core.api_errors import (
     user_not_found,
     incorrect_current_password,
     code_incorrect,
-    invalid_login_method
+    invalid_login_method,
+    incorrect_phone
 )
 from app.core.security import verify_password, hash_password
 from app.api.dependencies.token_auth import create_access_token
@@ -21,8 +22,7 @@ from app.api.dependencies.refresh_auth import (
 )
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
-from app.schemas.user import LoginCredentials, LoginPayload
-from app.schemas.auth import LoginResponse, PhoneAuthPayload
+from app.schemas.auth import LoginRequest, LoginResponse, PhoneAuthPayload, ChangePhoneRequest, ChangePhoneResponse
 from app.schemas.common import Username, Password
 from twilio.rest import Client
 from app.api.dependencies.twilio_2FA import send_verification, check_verification
@@ -52,7 +52,8 @@ async def get_user_from_code(session: AsyncSession, username: Username, code: st
     
     return user
 
-async def login_user(session: AsyncSession, twilio_client: Client, payload: LoginPayload) -> LoginResponse:
+
+async def login_user(session: AsyncSession, twilio_client: Client, payload: LoginRequest) -> LoginResponse:
     if payload.login_method == "password":
         user = await get_user_from_password(session, username=payload.username, password=payload.login_value)
     elif payload.login_method == "code":
@@ -64,23 +65,6 @@ async def login_user(session: AsyncSession, twilio_client: Client, payload: Logi
     refresh_token = await create_refresh_token(session, user_id = str(user.id))
 
     return LoginResponse(access_token = access_token, refresh_token = refresh_token)
-
-
-async def send_mobile_code(session: AsyncSession, twilio_client: Client, payload: PhoneAuthPayload) -> None:
-    user = await session.scalar(
-        select(User).where(User.username == payload.username)
-    )
-    if user is None:
-        raise user_not_found()
-    #flow: have user, get their phone number, send number a message using the 
-    # twilio client we setup within the verification methods in twilio_2FA.
-    destination = user.phone_number
-
-    await send_verification(
-        twilio_client=twilio_client,
-        destination=destination,
-        channel="sms",
-    )
 
 
 async def refresh_tokens(session: AsyncSession, refresh_token_raw: str) -> LoginResponse:
@@ -128,7 +112,6 @@ async def reset_password(session: AsyncSession, twilio_client: Client, username:
     user = await session.scalar(
         select(User).where(User.username == username)
     )
-
     # Generic failure whether the user is missing or the code is wrong, so this
     # endpoint can't be used to discover which usernames exist.
     if user is None:
@@ -148,6 +131,23 @@ async def reset_password(session: AsyncSession, twilio_client: Client, username:
     await session.commit()
 
 
+async def send_mobile_code(session: AsyncSession, twilio_client: Client, payload: PhoneAuthPayload) -> None:
+    user = await session.scalar(
+        select(User).where(User.username == payload.username)
+    )
+    if user is None:
+        raise user_not_found()
+    #flow: have user, get their phone number, send number a message using the 
+    # twilio client we setup within the verification methods in twilio_2FA.
+    destination = user.phone_number
+
+    await send_verification(
+        twilio_client=twilio_client,
+        destination=destination,
+        channel="sms",
+    )
+
+
 async def check_mobile_code(twilio_client: Client, user: User, code: str) -> str:
     destination = user.phone_number
 
@@ -158,3 +158,14 @@ async def check_mobile_code(twilio_client: Client, user: User, code: str) -> str
     )
 
     return status
+
+
+async def change_phone(session: AsyncSession, user_id: UUID, payload: ChangePhoneRequest) -> ChangePhoneResponse:
+    user = await session.scalar(select(User).where(User.id == user_id))
+    if user is None:
+        raise incorrect_phone()
+
+    user.phone_number = payload.new_number
+    
+    await revoke_all_user_tokens(session, user_id)
+    await session.commit()

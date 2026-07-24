@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.schemas.common import Username, Password
+from app.schemas.common import Username, Password, PhoneNumber
 
 # BaseModel can be serialized to/from JSON
 class LoginCredentials(BaseModel):
@@ -8,4 +8,4 @@ class LoginCredentials(BaseModel):
 
 class UserCreate(BaseModel):
     login_credentials: LoginCredentials
-    phone: str
+    phone: PhoneNumber
